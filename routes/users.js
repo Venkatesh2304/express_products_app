@@ -1,36 +1,26 @@
 import express from "express";
+import User from "../models/User.js"
+import Product from "../models/Product.js";
 var router = express.Router();
 
-// Route for user registration
-router.post("/register", async (req, res) => {
-  let reqBody = req.body;
-  let newUser = await User({
-    firstName: reqBody.firstName,
-    lastName: reqBody.lastName,
-    email: reqBody.email,
-    mobileNo: reqBody.mobileNo,
-    password: bcrypt.hashSync(reqBody.password, 10),
-  });
-  return res.send(true);
-});
+router.get("/userDetails" , async ( req,res) => { 
+     let data = await User.findOne({ email : req.user.email })
+     return res.send( data )
+})
 
-// Route for user authentication(login)
-router.post("/login", (req, res) => {
-  let reqBody = req.body;
-  return res.send(
-    User.findOne({ email: reqBody.email }).then((result) => {
-      if (result == null) {
-        return false;
-      } else {
-        const isPasswordCorrect = bcrypt.compareSync(reqBody.password, result.password);
-        if (isPasswordCorrect) {
-          return { access: auth.createAccessToken(result) };
-        } else {
-          return false;
-        }
-      }
-    })
-  );
-});
+router.get("/createOrder", async (req,res) => { 
+    let products = req.body ;
+    let total = 0 
+    products.map(({ productName, quantity })=> { 
+        Product.findOne({ name : productName }).then((res) => { 
+            total += res.price * quantity 
+        })
+    }) 
+    await User.updateOne({ email : req.user.email } , { "$push" : { 
+        orders : { products : products , totalAmount : total }
+    }})
+    return res.send(true)
+})
+
 
 export default router;
